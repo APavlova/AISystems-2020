@@ -1,4 +1,4 @@
- let width = 1500;
+ let width = 1000;
  let data = treedata;
 
  let tree = data => {
