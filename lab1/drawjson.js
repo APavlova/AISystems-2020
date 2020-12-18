@@ -1,10 +1,76 @@
- let width = 1000;
+ let width = 1500;
  let data = treedata;
+
+//Красивый вывод подписей к узлам диаграммы
+function get_atr(d, str){
+  let title;
+
+  if (d !== undefined){
+   if (typeof(d) == 'boolean'){
+    if (d)
+      title = str + 'Да';
+    else
+      title = str + 'Нет';
+   }
+   else
+    title = str + d;
+  }
+  else 
+   title = '';
+
+  return title;
+ }
+
+ //Поиск эвклидова расстояния между двумя листьями
+ function evklid(x, y){
+  let res=0;
+
+  //по всем числовым атрибутам
+  res+=Math.pow(x.temperature - y.temperature, 2);
+  res+=Math.pow(x.hotel - y.hotel, 2);
+  res+=Math.pow(x.tickets - y.tickets, 2);
+  res+=Math.pow(x.rating - y.rating, 2);
+  return Math.sqrt(res);
+ }
+
+ //Поиск эвклидова расстояния от листа х до всех остальных листьев дерева и формирование cписка
+ function evklid_list(x, tree, list){
+ let leave = {name:"", val:0};
+ let t=tree;
+
+ if(Array.isArray(t.children))
+    for(let i=0; i<t.children.length; i++)
+      evklid_list(x, t.children[i], list);
+ else{
+  leave.name = t.data.name;
+  leave.val = evklid(x, t.data);
+  list.push(leave);
+  }
+  console.log(list);
+ }
+
+// Поиск по листьям по имени - возвращает лист дерева(структурой), если он найден
+function find_by_name(name, tree_root) {
+  let t = tree_root;
+  let res;
+
+  if (Array.isArray(t.children)){
+    for (let i = 0; i < t.children.length; i++)
+      if(res === undefined)
+        res = find_by_name(name, t.children[i]);
+  }
+  else {
+    if (name === t.data.name){ 
+      res = t;
+    }
+  }
+  return(res);
+}
 
  let tree = data => {
   const root = d3.hierarchy(data);
-  root.dx = 10;
-  root.dy = width / (root.height + 1);
+  root.dx = 120;
+  root.dy = width / (root.height+1);
   return d3.tree().nodeSize([root.dx, root.dy])(root);
   }
 
@@ -53,8 +119,48 @@
 
   node.append("text")
       .attr("dy", "0.31em")
+      .attr("font-weight", "bold")
+      .attr("font-size", "12")
       .attr("x", d => d.children ? -6 : 6)
       .attr("text-anchor", d => d.children ? "end" : "start")
       .text(d => d.data.name)
+  
+  //виза
+    node.append("text")
+        .attr("dy", "1.91em")
+        .attr("x", d => d.children ? -6 : 6)
+        .attr("text-anchor", d => d.children ? "end" : "start")
+        .text(d => get_atr(d.data.visa, 'Нужна виза: '))
+  //температура
+    node.append("text")
+        .attr("dy", "3.21em")
+        .attr("x", d => d.children ? -6 : 6)
+        .attr("text-anchor", d => d.children ? "end" : "start")
+        .text(d => get_atr(d.data.temperature, 'Температура в высокий сезон: '))
+  //стоимость отеля
+    node.append("text")
+        .attr("dy", "4.51em")
+        .attr("x", d => d.children ? -6 : 6)
+        .attr("text-anchor", d => d.children ? "end" : "start")
+        .text(d => get_atr(d.data.hotel, 'Стоимость отелей(руб/сут): '))
+  //билеты
+    node.append("text")
+        .attr("dy", "5.81em")
+        .attr("x", d => d.children ? -6 : 6)
+        .attr("text-anchor", d => d.children ? "end" : "start")
+        .text(d => get_atr(d.data.tickets, 'Стоимость билетов: '))
+  //сезон
+    node.append("text")
+        .attr("dy", "7.11em")
+        .attr("x", d => d.children ? -6 : 6)
+        .attr("text-anchor", d => d.children ? "end" : "start")
+        .text(d => get_atr(d.data.season, 'Высокий сезон: '))
+  //рейтинг
+    node.append("text")
+        .attr("dy", "8.41em")
+        .attr("x", d => d.children ? -6 : 6)
+        .attr("text-anchor", d => d.children ? "end" : "start")
+        .text(d => get_atr(d.data.rating, 'Рейтинг: '))
+
     .clone(true).lower()
       .attr("stroke", "white");

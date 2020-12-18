@@ -1,5 +1,8 @@
+const month = Object.freeze({"январь":1, "февраль":2, "март":3, "апрель":4, "май":5, "июнь":6, "июль":7,
+  "август":8, "сентябрь":9, "октябрь":10, "ноябрь":11, "декабрь":12});
+
 let treedata = {
-  name: "Тур. направления",
+  name: "Направления",
   children: [
   	{
   		name:"Активный отдых",
@@ -10,20 +13,100 @@ let treedata = {
           {
           name:"Горные походы", 
           children:[
-            {name:"Хибины"},
-            {name:"Эльбрус"},
+            {
+              name:"Хибины",
+              visa:false,
+              temperature:-20,
+              hotel:2000,
+              tickets:5000,
+              rating: 7.5,
+              season:"март"
+            },
+            {
+              name:"Эльбрус",
+              visa:false,
+              temperature:-25,
+              hotel:3000,
+              tickets:6000,
+              rating: 7,
+              season:"июнь"
+            },
           ]},
           {
           name:"Водные походы",
           children:[
-            {name:"р. Шуя"},
-            {name:"р. Катунь"},
-            {name:"р. Уксанйоки"},
-            {name:"р. Мста"},
-            {name:"р. Кереть"},
-            {name:"р. Тверца"},
-            {name:"Белое Море"},
-            {name:"Ладожское озеро"},
+            {
+              name:"Шуя",
+              visa:false,
+              temperature:10,
+              hotel:0,
+              tickets:3000,
+              rating: 7.5,
+              season:"май"
+            },
+            { 
+              name:"р. Катунь",
+              visa:false,
+              temperature:-25,
+              hotel:0,
+              tickets:4000,
+              rating: 7.5,
+              season:"июнь"
+            },
+            {
+              name:"р. Уксанйоки",
+              visa:false,
+              temperature:8,
+              hotel:0,
+              tickets:3000,
+              rating: 8,
+              season:"май"
+            },
+            {
+              name:"р. Мста",
+              visa:false,
+              temperature:12,
+              hotel:0,
+              tickets:1000,
+              rating: 6.5,
+              season:"май"
+            },
+            {
+              name:"р. Кереть",
+              visa:false,
+              temperature:11,
+              hotel:0,
+              tickets:800,
+              rating: 7,
+              season:"июнь"
+            },
+            {
+              name:"р. Тверца",
+              visa:false,
+              temperature:11,
+              hotel:0,
+              tickets:800,
+              rating: 6,
+              season:"май"
+            },
+            {
+              name:"Белое Море",
+              visa:false,
+              temperature:15,
+              hotel:0,
+              tickets:3500,
+              rating: 9,
+              season:"июль"
+            },
+            {
+              name:"Ладожское озеро",
+              visa:false,
+              temperature:19,
+              hotel:0,
+              tickets:3000,
+              rating: 9,
+              season:"август"
+            },
           ]},
           {
           name:"Пешие походы",
@@ -52,7 +135,15 @@ let treedata = {
             {
             name:"Финляндия",
             children:[
-              {name:"Рука"},
+              {
+                name:"Рука",
+                visa:true,
+                temperature:-1,
+                hotel:4000,
+                tickets:12000,
+                rating: 9,
+                season:"март"
+              },
             ]},
             {
             name:"Швеция",
@@ -173,7 +264,7 @@ let treedata = {
               {name:"Оаху"},
               {name:"Молокаи"},
             ]}
-          ]},
+          ]},/*
           {
           name:"Европейские страны",
           children:[
@@ -225,50 +316,7 @@ let treedata = {
               {name:"Дагомыс"},
               {name:"Лазаревское"}
             ]}
-          ]},
-          {
-          name:"Другое",
-          children:[
-            {
-            name:"США",
-            children:[
-              {name:"Сочи"},
-              {name:"Адлер"},
-              {name:"Дагомыс"},
-              {name:"Лазаревское"}
-            ]},
-            {
-            name:"Мексика",
-            children:[
-              {name:"Сочи"},
-              {name:"Адлер"},
-              {name:"Дагомыс"},
-              {name:"Лазаревское"}
-            ]},
-            {
-            name:"Австралия",
-            children:[
-              {name:"Сочи"},
-              {name:"Адлер"},
-              {name:"Дагомыс"},
-              {name:"Лазаревское"}
-            ]},
-          ]},
-    ]},
-    {
-      name:"Городской туризм"
-    },
-    {
-      name:"Круизы"
-    },
-    {
-      name:"Религиозный туризм"
-    },
-    {
-      name:"Медицинский туризм",
-      children:[
-        {name:"Корея"},
-        {name:"Израиль"},
-      ]},
+          ]}*/
+    ]}
   ]
 }
