@@ -1,0 +1,49 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+ <head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <title>Визуализация дерева JSON на JS</title>
+  <script type="text/javascript" src="d3.v6.min.js"></script>
+  <script src="jquery-3.5.1.min.js"></script>
+  <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script> 
+  <script type="text/javascript" src="data.js"></script>
+  <script type="text/javascript" src="calc.js"></script>
+  <script type="text/javascript" src="interface.js"></script>
+  <link rel="stylesheet" href="style.css"/>
+  <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+  <link rel="stylesheet" href="https://jqueryui.com/resources/demos/style.css">
+
+ </head>
+ <body>
+  <div class="main">
+    <div class="menu">
+      <div class="button" id="calc_btn">Посчитать близость</div>
+      <div class="button" id="search_btn">Ранжированный поиск</div>
+    </div>
+    <div id="calc">
+        <p>Введите название листа</p>
+        <input type="text" name="leave" size="40">
+        <div id="go_button" class="button">GO</div>
+        <p><input id="evklid" type="radio" name="method" value="evklid" checked="true"><label for="evklid"> Эвклидово расстояние</label></p>
+        <p><input id="difference" type="radio" name="method" value="difference"><label for="difference"> Количество отличий</label></p>
+        <p><input id="tree" type="radio" name="method" value="tree"><label for="tree"> Растояние по дереву</label></p>
+        <p><input id="korrel" type="radio" name="method" value="korrel"><label for="korrel"> Корреляция</label></p>    
+        <p id="res"></p>                                 
+    </div>
+
+    <div id="search">
+        <p>Количество дней</p>
+        <input type="text" name="days" size="40" value="5">
+        <p id="cost_lbl">Стоимость отдыха:</p>
+        <div id="cost"></div>
+        <p id="temp_lbl">Температура:</p>
+        <div id="temp"></div>
+        <p><input id="visa" type="checkbox" name="viza"><label for="visa"> Без визы</label></p>   
+        <div id="go_search" class="button">Искать</div>
+        <p id="res2"></p>                                 
+    </div>
+  </div>
+  <script type="text/javascript" src="drawjson.js"></script>
+  
+ </body>
+</html>

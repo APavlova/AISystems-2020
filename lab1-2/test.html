@@ -1,0 +1,32 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+ <head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <title>Визуализация дерева JSON на JS</title>
+  <script type="text/javascript" src="d3.v6.min.js"></script>
+  <script src="jquery-3.5.1.min.js"></script>
+  <script type="text/javascript" src="data.js"></script>
+  <script type="text/javascript" src="calc.js"></script>
+  <script type="text/javascript" src="interface.js"></script>
+  <link rel="stylesheet" href="style.css"></link>
+  
+
+ </head>
+ <body>
+  <div class="menu">
+    <!--<div class="button">Посчитать близость</div>-->
+    <div class="calc">
+        <p>Введите название листа</p>
+        <input type="text" name="leave" size="40">
+        <div id="go_button" class="button">GO</div>
+        <p><input id="evklid" type="radio" name="method" value="evklid" checked="true"><label for="evklid"> Эвклидово расстояние</label></p>
+        <p><input id="difference" type="radio" name="method" value="difference"><label for="difference"> Количество отличий</label></p>
+        <p><input id="tree" type="radio" name="method" value="tree"><label for="tree"> Растояние по дереву</label></p>
+        <p><input id="korrel" type="radio" name="method" value="korrel"><label for="korrel"> Корреляция</label></p>    
+        <p id="res"></p>                                 
+    </div>
+  </div>
+  <script type="text/javascript" src="drawjson.js"></script>
+  
+ </body>
+</html>
