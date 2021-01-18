@@ -4,7 +4,7 @@ function range_search(tree, t1, t2, cost1, cost2, visa, days, season) {
   let toRemove=['Хибины'];//здесь должен быть список от пользователя того, что нужно не показывать.
 
   list_prepare(tree, list, t1, t2, cost1, cost2, visa, days, season);
-  console.log('range_search');
+  //console.log('range_search');
 
   list.sort((a, b) => a.range>b.range ? 1 : -1);
   
@@ -52,6 +52,17 @@ function list_prepare(tree, list, t1, t2, cost1, cost2, visa, days, season)
   list.push({name:t.data.name, range:range_diff});
   }  
 }
+ //Получает список всех листьев
+  function get_all(tree, list){
+  let t=tree;
+
+  if(Array.isArray(t.children))
+   for(let i=0; i<t.children.length; i++)
+    get_all(t.children[i], list);
+  else{
+   list.push(t.data.name);
+  }
+ } 
 
 // Поиск по листьям по имени - возвращает лист дерева(структурой), если он найден
 function find_by_name(name, tree_root) {
@@ -103,9 +114,6 @@ function evklid(x, y){
   }
  }
 
-
-
-
  /* Близость по дереву */
  //Находит список объектов, сортированных по удаленности от одного объекта d
  function proximity_list(d, list, proximity_it) {
@@ -140,6 +148,15 @@ function evklid(x, y){
      list.push({name:child.data.name, val:proximity_it});
  }
 
+//Находит степень удаленности х от у по дереву
+ function count_proximity(x, y){
+  var list = [];
+  proximity_list(x, list, 0);
+  if (list[list.findIndex(el => el.name === y.data.name)] != undefined)
+   return list[list.findIndex(el => el.name === y.data.name)].val;
+  return 0;
+ }
+
  //Находит близость расположения объектов к объекту x и записывает в лист
  function differences_list(x, tree, list){
 
@@ -148,26 +165,23 @@ function evklid(x, y){
     for (let i = 0; i < t.children.length; i++)
      differences_list(x, t.children[i], list);
    else{
-    list.push({name: t.data.name, val: count_differences(x, t)});
+    list.push({name: t.data.name, val: count_differences(x, t.data)});
    }
  }
-
-
 
  /*Количество отличий*/
  //Находит количество отличий между объектами x и y
   function count_differences(x, y){
-  let features_x = get_features(x);
-  let features_y = get_features(y);
+    let diff_sum = 0;
 
-  let diff_sum =
-      count_one_side_differences(x, y, features_x) + count_one_side_differences(y, x, features_y);
+    if (x.temperature != y.temperature) diff_sum+=1;
+    if (x.visa != y.visa) diff_sum+=1;
+    if (x.hotel != y.hotel) diff_sum+=1;
+    if (x.tickets != y.tickets) diff_sum+=1;
+    if (x.season != y.season) diff_sum+=1;
+    if (x.rating != y.rating)diff_sum+=1;
 
-  for(let i=0; i<features_x.length; i++)
-   if(y[features_x[i]] && !_.isEqual(y[features_x[i]], x.data[features_x[i]]))
-    diff_sum++;
-
-   return diff_sum;
+    return diff_sum;
  }
 
  //Считает признаки, которых нет в y, но есть в x
@@ -186,75 +200,33 @@ function evklid(x, y){
     return Object.keys(x).filter((n) => {return n != "name"});
  }
 
- //Получает список объектов, сортированных по количеству отличий для каждого листа
-/* function call_differences_list(tree){
-  let t=tree;
-  let list = [];
-
-  if(Array.isArray(t.children))
-   for(let i=0; i<t.children.length; i++)
-    call_differences_list(t.children[i]);
-  else{
-   differences_list(t, root, list);
-   console.log(t.data.name, list);
-  }
- }*/
-
- //Получает список объектов, сортированных по близости для каждого листа
-/*  function call_proximity_list(tree){
-  let t=tree;
-  let list = [];
-
-  if(Array.isArray(t.children))
-   for(let i=0; i<t.children.length; i++)
-    call_proximity_list(t.children[i]);
-  else{
-   proximity_list(t, list, 0);
-   console.log(t.data.name, list);
-  }
- }*/
-
-
-  //Выводит список объектов с коэффициентами корелляций для каждого листа
-/*  function call_correlation_list(tree){
-  let t=tree;
-  let list = [];
-
-  if(Array.isArray(t.children))
-   for(let i=0; i<t.children.length; i++)
-    call_correlation_list(t.children[i]);
-  else{
-   correlation_list(t, root, list);
-   console.log(t.data.name, list);
-  }
- }*/
-
-
 /*Корреляция*/
  function correlation_list(x, tree, root, list){
   let t = tree;
 
    if(Array.isArray(t.children))
     for (let i = 0; i < t.children.length; i++)
-     correlation_list(x, t.children[i], list);
+     correlation_list(x, t.children[i], root, list);
    else{
     list.push({name: t.data.name, val: correlation(x, t, root)});
    }
  }
 
  function correlation(x, y, tree){
-  let f_x = get_features(x);
+  let f_x = get_features(x.data);
   let avg, x_i, y_i;
   let sum_num = 0;
   let sum_den_1 = 0;
   let sum_den_2 = 0;
   let coef = 0;
 
+  console.log(f_x);
+
   //Для каждого признака
   for(let i=0; i<f_x.length; i++){
 
-   x_i = x[f_x[i]];
-   y_i = y[f_x[i]];
+   x_i = x.data[f_x[i]];
+   y_i = y.data[f_x[i]];
 
    //Если у двоих объектов есть признак - считаем значения для рассчета коэфф корреляции
    if(y_i != null && typeof(y_i) == "number"){
@@ -272,7 +244,7 @@ function evklid(x, y){
   return coef;
  }
 
- //Находит значения поля в дереве и записывает в лист
+ //Находит значения поля в дереве и записывает в список
  function count_feature_val(feature, tree, list){
   let t = tree;
 
@@ -282,6 +254,7 @@ function evklid(x, y){
    }
 
   if(t.data[feature] != null) {
+     console.log(t.data[feature]);
      list.push(t.data[feature]);
   }
  }
@@ -291,4 +264,75 @@ function evklid(x, y){
    let list = [];
    count_feature_val(feature, tree, list);
    return list.reduce((a, b) => (a + b)) / list.length;
+ }
+
+//Находит близость расположения объектов к объекту x и записывает в список
+ function recommendation_list(x, tree, list){
+
+   let t = tree;
+   if(Array.isArray(t.children))
+    for (let i = 0; i < t.children.length; i++)
+     recommendation_list(x, t.children[i], list);
+   else
+    list.push({name: t.data.name, val:recommend_coeff(x,t)});
+ }
+
+
+ function recommend_coeff(x,y){
+  return (8*count_differences(x.data,y.data) + 0.0001*evklid(x.data,y.data) + count_proximity(x,y)) + (-10)*correlation(x,y,root);
+ }
+
+  function find_common(list1, list2, res){
+
+  //Для каждого элемента первого списка 1
+  for(let i = 0; i < list1.length; i++){
+
+   //Если найдено совпадение - добавить в лист результата или увеличить его значение
+   let i_2=list2.findIndex(el => el.name === list1[i].name);
+   if (list2[i_2]!=undefined){
+
+    let i_r = res.findIndex(el => el.name === list1[i].name)
+    if (res[i_r]!=undefined){
+     res[i_r].val = (res[i_r].val + list2[i_2].val)/2;
+    }
+    else{
+     res.push({name: list1[i].name, val: (list1[i].val + list2[i_2].val)/2});
+    }
+   }
+  }
+ }
+
+  function del_el(list, name){
+  return list.filter(item => item.name !== name);
+ }
+
+ function get_common_recomendations(list_of_list){
+  let top_list=[];
+  let bottom_list=[];
+
+  //Для каждого листа из списка
+  for(let i=0; i<list_of_list.length; i++){
+
+   //Перебираем все остальные листы, начиная с текущего
+   for(let j=i+1; j<list_of_list.length; j++){
+
+    //Ищем одинаковые, составляем верхушку рекомендации
+    find_common(list_of_list[i], list_of_list[j], top_list);
+   }
+   bottom_list = bottom_list.concat(list_of_list[i]);
+  }
+
+  //Сортируем пересекающиеся рекомендации в порядке убывания (чем больше значение, тем чаще встр => выше в списке)
+  top_list.sort((a, b) => a.val > b.val ? 1 : -1);
+
+  //Добавляем к ним остальные списки, в порядке их оценки
+  let common=[];
+
+  find_common(bottom_list, top_list, common);
+  bottom_list = bottom_list.filter(x => !common.some(y => x.name === y.name));
+
+  bottom_list.sort((a, b) => a.val > b.val ? 1 : -1);
+  top_list = top_list.concat(bottom_list);
+
+  return top_list;
  }

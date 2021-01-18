@@ -35,6 +35,7 @@ svg{
     top: 0;
     left: 0;
     z-index: 100;
+    margin-left: 1rem;
 }
 p{
     width: 100%;
@@ -43,11 +44,22 @@ p{
 input{
     margin: 0.5rem 0;
 }
-#calc, #search{
+#calc, #search, #collab, #content{
     padding: 0.5rem;
     display: flex;
     flex-wrap: wrap;
+    max-width: 550px;
 }
-#search{
+#search, #collab, #content{
     display: none;
+}
+#hist-list,#del-list,#text3{
+    width: 33%;
+}
+
+.hist-check{
+  display: inline-block;
+}
+.hist-check-lable{
+  display: inline-block;
 }
