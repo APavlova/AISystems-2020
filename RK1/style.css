@@ -1,0 +1,65 @@
+body{
+    font-family: arial;
+}
+
+svg{
+    position: absolute;
+    top:0;
+    left:0;
+    z-index: 1;
+}
+.button{
+    margin: 0.5rem;
+    padding: 1rem;
+    background-color:#0075ff;
+    color: white;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    text-align: center;
+    max-width: 12rem;
+}
+.button:hover{
+    background-color:#62a8f8;  
+}
+.menu{
+    width: 100%;
+    display: flex;
+}
+#temp, #cost{
+    width: 70%;
+    margin-top: 0.5rem;
+    margin-bottom: 0.8rem;
+}
+.main{
+    position:absolute;
+    top: 0;
+    left: 0;
+    z-index: 100;
+    margin-left: 1rem;
+}
+p{
+    width: 100%;
+    margin: 0;
+}
+input{
+    margin: 0.5rem 0;
+}
+#calc, #search, #collab, #content{
+    padding: 0.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    max-width: 550px;
+}
+#search, #collab, #content{
+    display: none;
+}
+#hist-list, #like-list, #del-list, #text3{
+    width: 33%;
+}
+
+.hist-check{
+  display: inline-block;
+}
+.hist-check-lable{
+  display: inline-block;
+}
