@@ -220,8 +220,6 @@ function evklid(x, y){
   let sum_den_2 = 0;
   let coef = 0;
 
-  console.log(f_x);
-
   //Для каждого признака
   for(let i=0; i<f_x.length; i++){
 
@@ -254,7 +252,6 @@ function evklid(x, y){
    }
 
   if(t.data[feature] != null) {
-     console.log(t.data[feature]);
      list.push(t.data[feature]);
   }
  }
@@ -277,6 +274,12 @@ function evklid(x, y){
     list.push({name: t.data.name, val:recommend_coeff(x,t)});
  }
 
+//Находит список соседних листов (группу)
+ function collab_list(x, tree){
+  List=[];
+  proximity_list(x, List, 0);
+  return List.filter(item => item.val == 1);
+ }
 
  function recommend_coeff(x,y){
   return (8*count_differences(x.data,y.data) + 0.0001*evklid(x.data,y.data) + count_proximity(x,y)) + (-10)*correlation(x,y,root);
@@ -309,7 +312,6 @@ function evklid(x, y){
  function get_common_recomendations(list_of_list){
   let top_list=[];
   let bottom_list=[];
-
   //Для каждого листа из списка
   for(let i=0; i<list_of_list.length; i++){
 
@@ -324,7 +326,7 @@ function evklid(x, y){
 
   //Сортируем пересекающиеся рекомендации в порядке убывания (чем больше значение, тем чаще встр => выше в списке)
   top_list.sort((a, b) => a.val > b.val ? 1 : -1);
-
+  
   //Добавляем к ним остальные списки, в порядке их оценки
   let common=[];
 

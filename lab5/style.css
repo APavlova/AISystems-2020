@@ -53,7 +53,7 @@ input{
 #search, #collab, #content{
     display: none;
 }
-#hist-list,#del-list,#text3{
+#hist-list, #like-list, #del-list, #text3{
     width: 33%;
 }
 

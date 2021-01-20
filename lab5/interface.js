@@ -1,13 +1,50 @@
 
 $(document).ready(function() {
 
-  $('#go_collab').click(function () {
+  //Коллаборативная фильтрация
+  $("#go_collab").click(function(){
     var a=$('#hist-list input:checked'); //Выбираем все отмеченные checkbox
     var checked=[];
     for (var x=0; x<a.length;x++){
       checked.push(a[x].value);
     }
-    //console.log(checked);
+
+    //Собираем массив массивов рекомендаций для каждого выделенного объекта
+    var list_of_lists=[];
+
+    for (let i=0; i<checked.length; i++){
+       let wrk_leave = find_by_name(checked[i], root);
+       let list=collab_list(wrk_leave, root);
+       list.sort((a, b) => a.val > b.val ? 1 : -1);
+       list_of_lists.push(list);
+    }
+    var recom_list=get_common_recomendations(list_of_lists);
+    for (let i=0; i<checked.length; i++){
+        recom_list = del_el(recom_list, checked[i]);
+    }
+    recom_list = recom_list.slice(0, 10);
+
+    var txt="<b>Результат для истории:";
+    checked.forEach(function(item, i, arr){
+        txt = txt + ' ' + item + ',';
+      });
+
+    txt = txt.substr(0, txt.length-1) + ':</b>' + '<br/>';
+
+    recom_list.forEach(function(item, i, arr){
+      txt = txt+'<br/>'+ (i+1) + '. ' + item.name;
+    });
+
+    $('#res4').html(txt);
+  });
+
+  //Поиск близких по признакам товаров
+  $('#go_cont').click(function () {
+    var a=$('#like-list input:checked'); //Выбираем все отмеченные checkbox
+    var checked=[];
+    for (var x=0; x<a.length;x++){
+      checked.push(a[x].value);
+    }
 
     //Собираем массив массивов рекомендаций для каждого выделенного объекта
     var list_of_lists=[];
@@ -26,10 +63,15 @@ $(document).ready(function() {
     for (var x=0; x<d.length;x++){
       del.push(d[x].value);
     }
+    
     for (let i=0; i<del.length; i++){
         recom_list = del_el(recom_list, del[i]);
     }
-    recom_list.slice(10);
+    for (let i=0; i<checked.length; i++){
+        recom_list = del_el(recom_list, checked[i]);
+    }
+
+    recom_list = recom_list.slice(0, 10);
     //console.log(recom_list); //рекомендации с учетом удаленных
 
     var txt="<b>Результат для";
@@ -150,8 +192,8 @@ $(document).ready(function() {
             '  <label class="hist-check-label">' + item + '</label>'+
             '</div>';
       });
-
-      $('#hist-list').html('<b>Выберите элементы для истории:</b>' + txt);
+      $('#hist-list').html('<b>Выберите элементы истории:</b>' + txt);
+      $('#like-list').html('<b>Выберите элементы для основы:</b>' + txt);
       $('#del-list').html('<b>Выберите нежелательные элементы:</b>' + txt);
    });
 
