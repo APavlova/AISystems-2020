@@ -4,11 +4,11 @@ from PyQt5.QtWidgets import QMessageBox, QListWidgetItem
 import logging as log
 from gui import Ui_dialog_form
 import sys
-from user_dialog import DialogSystem, UserDialog
+from user_dialog import DialogSystem
 import debug
 
 class ApplicationWindow(QtWidgets.QMainWindow):
-    user_dialog = UserDialog()
+    user_dialog = DialogSystem()
 
     def __init__(self):
         super(ApplicationWindow, self).__init__()
@@ -48,8 +48,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.ui.dialog_widget.addItem(new_message_item)
 
         # TODO: Свести две обработки текста к одной
-        self.user_dialog.process_text(message)
-        self.dialog_system.process_message(message)
+        self.dialog_system.process_text(message)
 
         # Очистить поле ввода
         self.clear_message_edit()
@@ -77,6 +76,9 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
     @pyqtSlot(str)
     def fixed_questions_box_text_changed(self, string):
+        if not len(string):
+            return
+
         log.debug(f"Заготовленный текст: {string}")
         self.ui.fixed_questions_box.setCurrentIndex(-1)
         self.ui.message_edit.setText(string)
