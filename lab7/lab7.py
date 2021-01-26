@@ -7,9 +7,8 @@ import sys
 from user_dialog import DialogSystem
 import debug
 
-class ApplicationWindow(QtWidgets.QMainWindow):
-    user_dialog = DialogSystem()
 
+class ApplicationWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super(ApplicationWindow, self).__init__()
 
@@ -19,6 +18,10 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
         self.dialog_system = DialogSystem()
         self.setup_dialog_system()
+        self.setup_state_machine()
+
+        # Обновляем визуально начальное состояние конечного автомата диалога
+        self.state_machine_state_changed(self.dialog_system.state_machine.get_state())
 
     def setup_ui(self):
         self.ui.send_message_button.clicked.connect(
@@ -31,6 +34,10 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
     def setup_dialog_system(self):
         self.dialog_system.send_answer_signal.connect(self.dialog_system_answer_message_received)
+        self.dialog_system.send_analysis_report.connect(self.dialog_system_analysis_report_received)
+
+    def setup_state_machine(self):
+        self.dialog_system.state_machine.send_new_state.connect(self.state_machine_state_changed)
 
     def send_message(self):
         message = self.ui.message_edit.text()
@@ -55,6 +62,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
     def clear_dialog_widget(self):
         self.ui.dialog_widget.clear()
+        self.ui.ais_result_view.clear()
         # TODO: Перезапустить чат
 
     def clear_message_edit(self):
@@ -96,6 +104,13 @@ class ApplicationWindow(QtWidgets.QMainWindow):
     def dialog_widget_scroll_down(self):
         self.ui.dialog_widget.scrollToBottom()
 
+    @pyqtSlot(str)
+    def state_machine_state_changed(self, state):
+        self.ui.state_machine_edit.setText(state)
+
+    @pyqtSlot(str)
+    def dialog_system_analysis_report_received(self, text):
+        self.ui.ais_result_view.setText(text)
 
 def main():
     app = QtWidgets.QApplication(sys.argv)

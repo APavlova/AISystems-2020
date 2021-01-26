@@ -1,5 +1,6 @@
 import pymorphy2
 from PyQt5.QtCore import pyqtSignal, QObject
+from state_machine import DialogStateMachine
 from user_dict import *
 import logging as log
 import debug
@@ -48,18 +49,60 @@ dialog_sentence_patterns = [
 ]
 
 
+# Память ключевых слов, упоминаемых в диалоге
+class DialogMemory:
+    dialog_memory = {
+        "country": None,
+        "place": None,
+        "sport": None,
+        "time": None,
+        "weather": None,
+        "travel_way": None,
+        "user_like_visa": None
+    }
+
+    def __init__(self):
+        pass
+
+    def save(self, key, value):
+        if key in self.dialog_memory:
+            if value is not None:
+                if len(value):
+                    # FIXME: Учитывается только одно слово из списка
+                    log.debug(f"Запомнить: {key} = {value[0]}")
+                    self.dialog_memory[key] = value
+
+    def restore(self, key):
+        if key in self.dialog_memory:
+            return self.dialog_memory[key]
+        return None
+
+    def reset(self):
+        for key in self.dialog_memory:
+            self.dialog_memory[key] = None
+        log.debug(f"Память диалога очищена!")
+        log.debug(self.dialog_memory)
+
+
+# Класс диалоговой системы
 class DialogSystem(QObject):
+    dialog_memory = DialogMemory()
+    state_machine = DialogStateMachine()
     send_answer_signal = pyqtSignal(str)
+    send_analysis_report = pyqtSignal(str)
 
     def __init__(self):
         super().__init__()
         self.morph = pymorphy2.MorphAnalyzer()
         self.morphs = None
-        self.syntactic_report = None
 
     def process_text(self, text):
-        answer_text, self.morphs = self._process_text(text)
-        self.print_syntactic_analysis_report(self.morphs)
+        answer_text, answer_type, prob, self.morphs = self._process_text(text)
+
+        # Отправить сигнал с результатами анализа текста
+        self.send_syntactic_analysis_report(self.morphs, answer_type, prob)
+
+        # Отправить сигнал с текстом ответа системы
         self.send_answer_signal.emit(answer_text)
 
     # Обработка исходного текста
@@ -82,7 +125,7 @@ class DialogSystem(QObject):
         # с учетом выделения уточняющих слов
         answer_text = self.generate_answer(answer_type, morphs)
 
-        return answer_text, morphs
+        return answer_text, answer_type, prob, morphs
 
     def tokenization(self, text):
         # Упрощение: объяединяем все слова в одно предложение
@@ -154,9 +197,51 @@ class DialogSystem(QObject):
         elif answer_type == "country":
             answer_text = "Ответ про страну / страны."
 
+        # Выделить полезные слова из набора слов
+        # и запомнить в памяти диалоговой системы
+        self.filter_useful_words_and_save_to_dialog_memory(words)
+
+        # Подготовка ответа
+
         return answer_text
 
-    def print_syntactic_analysis_report(self, words):
+    def filter_useful_words_and_save_to_dialog_memory(self, words):
+        # Поиск пересечений со словарем действия
+        travel_way_intersect = \
+            self.intersect_with_dict(words, user_attract_travel_way_dict)
+        # Запомнить
+        self.dialog_memory.save("travel_way", travel_way_intersect)
+
+        # Поиск пересечений со словарем досуга
+        sport_intersect = self.intersect_with_dict(words,
+                                                   user_attract_sport_dict)
+        # Запомнить
+        self.dialog_memory.save("sport", sport_intersect)
+
+        # Поиск пересечений со словарем мест отдыха
+        place_intersect = self.intersect_with_dict(words,
+                                                   user_attract_place_dict)
+        # Запомнить
+        self.dialog_memory.save("place", place_intersect)
+
+        # Поиск пересечений со словарем стран
+        country_intersect = self.intersect_with_dict(words,
+                                                     user_attract_country_dict)
+        # Запомнить
+        self.dialog_memory.save("country", country_intersect)
+
+        # Поиск пересечений со словарем времени
+        time_intersect = self.intersect_with_dict(words,
+                                                  user_attract_time_dict)
+        # Запомнить
+        self.dialog_memory.save("time", time_intersect)
+
+        # Поиск пересечений со словарем погодных условий
+        weather_intersect = self.intersect_with_dict(words, weather_dict)
+        # Запомнить
+        self.dialog_memory.save("weather", weather_intersect)
+
+    def send_syntactic_analysis_report(self, words, answer_type, prob):
         if not len(words):
             return
 
@@ -189,22 +274,25 @@ class DialogSystem(QObject):
         weather_wish_intersect = \
             self.intersect_with_dict(words, user_attract_weather_dict)
 
-        # Подбор ближайшего паттерна предложения
-        intersect_set = set()
-
         # Отчет синтаксического анализа
-        self.syntactic_report = f'Текст пользователя: {words}\n'
-        self.syntactic_report += f'Ключевые слова:\n'
-        self.syntactic_report += f'\t(А) вопрос. слова: {wish_intersect}\n'
-        self.syntactic_report += f'\t(B) движение: {travel_way_intersect}\n'
-        self.syntactic_report += f'\t(C) досуг: {sport_intersect}\n'
-        self.syntactic_report += f'\t(D) места отдыха: {place_intersect}\n'
-        self.syntactic_report += f'\t(E) страна: {country_intersect}\n'
-        self.syntactic_report += f'\t(F) врем. промежуток: {time_intersect}\n'
-        self.syntactic_report += f'\t(G) погода: {weather_intersect}\n'
-        self.syntactic_report += f'\t(H) погодные усл.: ' \
-                                 f'{weather_wish_intersect}\n'
-        # print(self.syntactic_report)
+        syntactic_report = f'Слова из словаря:\n'
+        syntactic_report += f'(А) {wish_intersect}\n'
+        syntactic_report += f'(B) {travel_way_intersect}\n'
+        syntactic_report += f'(C) {sport_intersect}\n'
+        syntactic_report += f'(D) {place_intersect}\n'
+        syntactic_report += f'(E) {country_intersect}\n'
+        syntactic_report += f'(F) {time_intersect}\n'
+        syntactic_report += f'(G) {weather_intersect}\n'
+        syntactic_report += f'(H) {weather_wish_intersect}\n'
+
+        syntactic_report += f'\nКонтекст ответа:\n'
+        syntactic_report += f'{answer_type}\n'
+
+        syntactic_report += f'\nВероятность:\n'
+        prob_normalized = format(prob, '.2f')
+        syntactic_report += f'{prob_normalized}'
+
+        self.send_analysis_report.emit(syntactic_report)
 
     def intersect_with_dict(self, words, dictionary):
         words_set = set(words)
@@ -237,15 +325,3 @@ class DialogSystem(QObject):
     def attract_weather(self):
         morphs = set(self.morphs)
         return list(morphs.intersection(user_attract_weather_dict))
-
-
-class UserDialogFields:
-    def __init__(self):
-        self.time = None
-        self.temperature = None
-        self.location = None
-        self.sport = None
-        self.good_place = None
-        self.move_type = None
-
-    # def set_from(self, words):
