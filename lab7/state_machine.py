@@ -1,5 +1,15 @@
 from PyQt5.QtCore import QObject, pyqtSignal
 from transitions import Machine
+from enum import Enum
+
+
+# Состояния конечного автомата
+class DialogState(Enum):
+    user_ask_questions = "user_ask_questions",
+    user_choosing_country = "user_choosing_country",
+    user_thinking_about_visa = "user_thinking_about_visa",
+    user_approving_travel = "user_approving_travel",
+    user_approved_travel = "user_approved_travel"
 
 
 # Конечный автомат для развития сценария диалога по триггерам
@@ -10,38 +20,38 @@ class DialogStateMachine(QObject):
     # Возможные состояния диалога
     states = [
                 # Пользователь задает вопросы
-                "user_ask_questions",
+                DialogState.user_ask_questions,
                 # Пользователь выбирает страну из списка
-                "user_choosing_country",
+                DialogState.user_choosing_country,
                 # Пользователь думает по поводу оформления визы
-                "user_thinking_about_visa",
+                DialogState.user_thinking_about_visa,
                 # Пользователь думает над подтверждением поездки
-                "user_approving_travel",
+                DialogState.user_approving_travel,
                 # Пользователь подтвердил поездку. Диалог завершен
-                "user_approved_travel"
+                DialogState.user_approved_travel
                 ]
 
     # Возможные переходы диалога
     transitions = [
         # Система представила варианты; Пользователь выбирает страну из списка
         {
-            "source": "user_ask_questions",
-            "dest": "user_choosing_country",
+            "source": DialogState.user_ask_questions,
+            "dest": DialogState.user_choosing_country,
             "trigger": "user_accept",
             "after":  "send_signal"
         },
         # Система представила варианты; Пользователь не выбрал страну из списка
         {
-            "source": "user_choosing_country",
-            "dest": "user_ask_questions",
+            "source": DialogState.user_choosing_country,
+            "dest": DialogState.user_ask_questions,
             "trigger": "user_reject",
             "after":  "send_signal"
         },
         # Пользователь выбрал страну из списка; Спрашиваем про визу
         # (виза в стране требуется)
         {
-            "source": "user_choosing_country",
-            "dest": "user_thinking_about_visa",
+            "source": DialogState.user_choosing_country,
+            "dest": DialogState.user_thinking_about_visa,
             "trigger": "user_accept",
             "conditions": ['is_visa_required'],
             "after":  "send_signal"
@@ -49,30 +59,38 @@ class DialogStateMachine(QObject):
         # Пользователь выбрал страну из списка; Просим подтвердить согласие
         # на оформление (виза в стране не требуется)
         {
-            "source": "user_choosing_country",
-            "dest": "user_approving_travel",
+            "source": DialogState.user_choosing_country,
+            "dest": DialogState.user_approving_travel,
             "trigger": "user_accept",
             "after":  "send_signal"
+        },
+        # Пользователь согласился оформлять визу;
+        # Переходим к подтверждению оформления
+        {
+            "source": DialogState.user_thinking_about_visa,
+            "dest": DialogState.user_approving_travel,
+            "trigger": "user_accept",
+            "after": "send_signal"
         },
         # Пользователь отказался оформлять визу;
         # Переходим обратно к выбору стран
         {
-            "source": "user_thinking_about_visa",
-            "dest": "user_choosing_country",
+            "source": DialogState.user_thinking_about_visa,
+            "dest": DialogState.user_choosing_country,
             "trigger": "user_reject",
             "after":  "send_signal"
         },
         # Пользователь подтвердил согласил на оформление
         {
-            "source": "user_approving_travel",
-            "dest": "user_approved_travel",
+            "source": DialogState.user_approving_travel,
+            "dest": DialogState.user_approved_travel,
             "trigger": "user_accept",
             "after":  "send_signal"
         },
         # Пользователь отказался оформлять
         {
-            "source": "user_approving_travel",
-            "dest": "user_ask_questions",
+            "source": DialogState.user_approving_travel,
+            "dest": DialogState.user_ask_questions,
             "trigger": "user_reject",
             "after":  "send_signal"
         },
@@ -81,7 +99,7 @@ class DialogStateMachine(QObject):
     def __init__(self):
         super().__init__()
         self.machine = Machine(model=self, states=DialogStateMachine.states,
-                               initial=DialogStateMachine.states[0])
+                               initial=DialogState.user_ask_questions)
         # Настроить все переходы между состояниями конечного автомата
         self.setup_transitions()
 
@@ -95,8 +113,8 @@ class DialogStateMachine(QObject):
         return self.state
 
     def is_visa_required(self):
-        # TODO: Добавить проверка на наличие визы в стране
+        # TODO: Добавить проверку на наличие визы в стране
         return True
 
     def send_signal(self):
-        self.send_new_state.emit(self.state)
+        self.send_new_state.emit(self.state.name)

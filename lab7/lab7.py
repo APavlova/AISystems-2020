@@ -12,32 +12,50 @@ class ApplicationWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super(ApplicationWindow, self).__init__()
 
+        # Создаем GUI
         self.ui = Ui_dialog_form()
         self.ui.setupUi(self)
+
+        # Устанавливаем связи между элементами GUI
         self.setup_ui()
 
+        # Создаем диалогововую систему
         self.dialog_system = DialogSystem()
+
+        # Связь диалоговой системы с GUI
         self.setup_dialog_system()
         self.setup_state_machine()
 
-        # Обновляем визуально начальное состояние конечного автомата диалога
-        self.state_machine_state_changed(self.dialog_system.state_machine.get_state())
+        # В GUI задаем начальное состояние конечного автомата диалога
+        self.dialog_system.state_machine.send_new_state.emit(
+            self.dialog_system.state_machine.get_state().name
+        )
 
     def setup_ui(self):
         self.ui.send_message_button.clicked.connect(
-            self.send_message)
+            self.send_message
+        )
         self.ui.new_chat_button.clicked.connect(self.new_chat_button_clicked)
         self.ui.fixed_questions_box.currentTextChanged.connect(
-            self.fixed_questions_box_text_changed)
+            self.fixed_questions_box_text_changed
+        )
         self.ui.message_edit.setFocus()
-        self.ui.dialog_widget.model().rowsInserted.connect(self.dialog_widget_scroll_down)
+        self.ui.dialog_widget.model().rowsInserted.connect(
+            self.dialog_widget_scroll_down
+        )
 
     def setup_dialog_system(self):
-        self.dialog_system.send_answer_signal.connect(self.dialog_system_answer_message_received)
-        self.dialog_system.send_analysis_report.connect(self.dialog_system_analysis_report_received)
+        self.dialog_system.send_answer_signal.connect(
+            self.dialog_system_answer_message_received
+        )
+        self.dialog_system.send_analysis_report.connect(
+            self.dialog_system_analysis_report_received
+        )
 
     def setup_state_machine(self):
-        self.dialog_system.state_machine.send_new_state.connect(self.state_machine_state_changed)
+        self.dialog_system.state_machine.send_new_state.connect(
+            self.state_machine_state_changed
+        )
 
     def send_message(self):
         message = self.ui.message_edit.text()
@@ -54,7 +72,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         new_message_item.setForeground(Qt.red)
         self.ui.dialog_widget.addItem(new_message_item)
 
-        # TODO: Свести две обработки текста к одной
+        # Обработать сообщение пользователя в диалоговой системе
         self.dialog_system.process_text(message)
 
         # Очистить поле ввода
@@ -111,6 +129,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
     @pyqtSlot(str)
     def dialog_system_analysis_report_received(self, text):
         self.ui.ais_result_view.setText(text)
+
 
 def main():
     app = QtWidgets.QApplication(sys.argv)

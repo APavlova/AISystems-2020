@@ -1,7 +1,11 @@
 import pymorphy2
 from PyQt5.QtCore import pyqtSignal, QObject
-from state_machine import DialogStateMachine
+from state_machine import DialogStateMachine, DialogState
 from user_dict import *
+from dialog_answers import *
+import random
+from string import Template, Formatter
+from place_dict import place_dict, Sport
 import logging as log
 import debug
 
@@ -15,36 +19,69 @@ import debug
 # G - погода
 # H - слова степеней погодных условий
 
+# Паттерны распознавания текста в зависимости от состояния диалога
 dialog_sentence_patterns = [
     {
-        # Ключевое слово в предложении - вид спорта
-        # [A] [B] C [E]
-        "required": [user_attract_sport_dict],
-        "optional": [user_wish_dict, user_attract_travel_way_dict,
-                     user_attract_country_dict],
-        "answer_type": "sport"
+        # Пользователь задает вопросы
+        "state": [DialogState.user_ask_questions],
+        "patterns": [
+            {
+                # Ключевое слово в предложении - вид спорта
+                # [A] [B] C [E]
+                "required": [user_attract_sport_dict],
+                "optional": [user_wish_dict, user_attract_travel_way_dict,
+                             user_attract_country_dict],
+                "type": "sport"
+            },
+            {
+                # Ключевое слово в предложении - вид отдыха
+                # [A] [B] D [E]
+                "required": [user_attract_place_dict],
+                "optional": [user_wish_dict, user_attract_travel_way_dict,
+                             user_attract_country_dict],
+                "type": "place"
+            },
+            {
+                # Ключевое слово в предложении - погода в стране / странах
+                # [A] [F] G
+                "required": [user_attract_weather_dict],
+                "optional": [user_wish_dict, user_attract_time_dict],
+                "type": "weather"
+            },
+            {
+                # Ключевое слово в предложении - подобрать страну / страны
+                # [A] B [E]
+                "required": [user_attract_travel_way_dict],
+                "optional": [user_attract_country_dict, user_wish_dict],
+                "type": "country"
+            }
+        ]
     },
     {
-        # Ключевое слово в предложении - вид отдыха
-        # [A] [B] D [E]
-        "required": [user_attract_place_dict],
-        "optional": [user_wish_dict, user_attract_travel_way_dict,
-                     user_attract_country_dict],
-        "answer_type": "place"
+        # Пользователь выбирает страны из списка предложенных
+        "state": [DialogState.user_choosing_country],
+        "patterns": [
+            {
+                "required": [user_attract_country_dict],
+                "type": "user_choose"
+            }
+        ]
     },
     {
-        # Ключевое слово в предложении - погода в стране / странах
-        # [A] [F] G
-        "required": [user_attract_weather_dict],
-        "optional": [user_wish_dict, user_attract_time_dict],
-        "answer_type": "weather"
-    },
-    {
-        # Ключевое слово в предложении - подобрать страну / страны
-        # [A] B [E]
-        "required": [user_attract_travel_way_dict],
-        "optional": [user_attract_country_dict, user_wish_dict],
-        "answer_type": "country"
+        # Пользователь отвечает на оформление путевки или визы
+        # TODO: Предусмотреть наличие частички "не" в ответе
+        "state": [DialogState.user_approving_travel,
+                  DialogState.user_thinking_about_visa],
+        "patterns": [
+            {
+                "required": [user_confirmation_dict],
+                "type": "user_confirm"
+            },
+            {
+                "required": [user_rejection_dict],
+                "type": "user_reject"
+            }
+        ]
     }
 ]
 
@@ -125,6 +162,16 @@ class DialogSystem(QObject):
         # с учетом выделения уточняющих слов
         answer_text = self.generate_answer(answer_type, morphs)
 
+        # Сменить состояние диалога
+        if answer_type == "user_reject":
+            self.state_machine.user_reject()
+        else:
+            # TODO: Подтвердить только если была выбрана страна!
+            self.state_machine.user_accept()
+
+        # XXX: Убрать как только заработает конечный автомат
+        self.state_machine.user_reject()
+
         return answer_text, answer_type, prob, morphs
 
     def tokenization(self, text):
@@ -145,8 +192,17 @@ class DialogSystem(QObject):
         pattern_max_prob = 0.0
         pattern_ans_type = None
 
-        # Перебор всех заложенных паттернов сообщений
+        # Текущее состояние диалога
+        dialog_state = self.state_machine.get_state()
+
+        # Набор паттернов на основе состояния диалога
+        patterns = None
         for pattern in dialog_sentence_patterns:
+            if dialog_state in pattern["state"]:
+                patterns = pattern["patterns"]
+
+        # Перебор всех заложенных паттернов сообщений для текущего состояния
+        for pattern in patterns:
             answer_type, prob = self.apply_pattern(words, pattern)
             if pattern_max_prob < prob:
                 pattern_max_prob = prob
@@ -173,35 +229,274 @@ class DialogSystem(QObject):
             weight_total += required_dict_weight
 
         # Проверка необязательных совпадений со словарем
-        for optional in pattern["optional"]:
-            if len(self.intersect_with_dict(words, optional)) > 0:
-                weight_sum += optional_dict_weight
-            weight_total += optional_dict_weight
+        if "optional" in pattern:
+            for optional in pattern["optional"]:
+                if len(self.intersect_with_dict(words, optional)) > 0:
+                    weight_sum += optional_dict_weight
+                weight_total += optional_dict_weight
 
         pattern_apply_prob = weight_sum / weight_total
-        answer_type = pattern["answer_type"]
+        answer_type = pattern["type"]
+
         print(f"Вероятность применения паттерна '{answer_type}':"
               f" {weight_sum} / {weight_total} = {pattern_apply_prob}\n")
 
         return answer_type, pattern_apply_prob
 
     def generate_answer(self, answer_type, words):
-        # TODO: Добавить реализацию
-        answer_text = "Я не понимаю вопроса."
-        if answer_type == "sport":
-            answer_text = "Ответ про досуг."
-        elif answer_type == "place":
-            answer_text = "Ответ про место отдыха."
-        elif answer_type == "weather":
-            answer_text = "Ответ про погоду."
-        elif answer_type == "country":
-            answer_text = "Ответ про страну / страны."
+        answer_text = None
+
+        # Формирование ответа на вопрос пользователя
+        if self.state_machine.get_state() == DialogState.user_ask_questions:
+            answer_text = self.generate_user_ask_answer(answer_type, words)
+
+        # Страна выбрана. Формирование вопроса про оформление или визу
+        if self.state_machine.get_state() == DialogState.user_choosing_country:
+            answer_text = self.generate_user_choose_country_answer(answer_type,
+                                                                   words)
+
+        # Ответ на оформление визы получен. Вопрос про подтверждения оформления
+        if self.state_machine.get_state() == DialogState.user_thinking_about_visa:
+            answer_text = self.generate_user_thinking_about_visa(answer_type,
+                                                                 words)
+
+        # Ответ на подверждение оформления получен. Выдать результаты.
+        if self.state_machine.get_state() == DialogState.user_approving_travel:
+            answer_text = self.generate_user_approving_travel(answer_type,
+                                                              words)
+
+        # Завершение диалога какой-то фразой
+        if self.state_machine.get_state() == DialogState.user_approved_travel:
+            answer_text = self.generate_user_approved_travel(answer_type, words)
+
+        # Вопрос или ответ не распознаны
+        if answer_type is None or answer_text is None:
+            answer_text = "Я не понимаю."
+
+        return answer_text
+
+    def generate_user_ask_answer(self, answer_type, words):
+        answer_text = None
+
+        # Формирование ответа на вопрос про досуг
+        if answer_type == "sport" or answer_type == "place":
+            answer_text = self.apply_answer_template(answer_type, words)
+        if answer_type == "country" or answer_type == "weather":
+            answer_text = self.apply_answer_template(answer_type, words)
 
         # Выделить полезные слова из набора слов
         # и запомнить в памяти диалоговой системы
         self.filter_useful_words_and_save_to_dialog_memory(words)
 
-        # Подготовка ответа
+        return answer_text
+
+    def apply_answer_template(self, answer_type, words):
+        for dialog_answer in dialog_answers:
+            for a_type in dialog_answer["answer_types"]:
+                # Найдены шаблоны ответов по типу ответа
+                if a_type == answer_type:
+                    # Выбрать шаблон ответа случайным образом
+                    template_answer = random.choice(dialog_answer["answers"])
+
+                    # Заполнить идентификаторы шаблона
+                    answer_text = self.fill_answer_template(template_answer,
+                                                            answer_type,
+                                                            words)
+                    return answer_text
+        return None
+
+    def fill_answer_template(self, template_answer, answer_type, words):
+        # Создать словарь замен для шаблонов
+        # TODO: Улучшить реализацию
+        replace_dict = {}
+
+        # Досуг или место отдыха
+        name = []
+        valid_dict = ""
+        if answer_type == "sport":
+            # Вид досуга из ключевых слов
+            filter_words = list(set(words).intersection(user_attract_sport_dict))
+            name = self.find_in_place_dict(answer_type, filter_words, "sport")
+            valid_dict = "sport_name"
+        elif answer_type == "place":
+            # Вид досуга из ключевых слов
+            filter_words = list(set(words).intersection(user_attract_place_dict))
+            name = self.find_in_place_dict(answer_type, filter_words, "good_place")
+            valid_dict = "good_place"
+
+        if len(name):
+            # FIXME: Досуг или место отдыха всегда в множественном числе.
+            #  Исправить!
+            phrase = name[0][0].value.split()
+            name = []
+            for word in phrase:
+                name.append(self.morph.parse(word)[0].inflect({'plur'}))
+
+            str = ""
+            if valid_dict in template_answer["inflect"]:
+                inflect = template_answer["inflect"][valid_dict]
+                for i in range(0, len(name)):
+                    name[i] = name[i].inflect(inflect)
+
+            # Набор поставленных слов в падеж в строку
+            str += name[0].word
+            for i in range(1, len(name)):
+                str += " " + name[i].word
+
+            # Это не ошибка!
+            replace_dict["sport_name"] = str
+
+        # Страна
+        case = "nomn"
+        if "country_name" in template_answer["inflect"]:
+            case = template_answer["inflect"]["country_name"]
+
+        country_name = self.generate_answer_country_list(answer_type, words,
+                                                         case)
+
+        if "country_word" in template_answer["inflect"]:
+            country_word = self.morph.parse("страна")[0].inflect({
+                'plur' if len(country_name) else 'sing'
+            })
+            inflect = template_answer["inflect"]["country_word"]
+            country_word = country_word.inflect(inflect)
+
+            replace_dict["country_word"] = country_word.word
+
+        # Список стран в читабельном виде
+        replace_dict["country_name"] = country_name
+
+        # Результирующая строка
+        answer_text = Formatter().format(template_answer["template"],
+                                         **replace_dict)
+        answer_text = answer_text[0].upper() + answer_text[1:]
+
+        return answer_text
+
+    def generate_answer_country_list(self, answer_type, words, case):
+        dictionary = None
+
+        # Фильтр стран по досугу
+        if answer_type == "sport":
+            dictionary = user_attract_sport_dict
+        # Список стран по месту отдыха
+        elif answer_type == "place":
+            dictionary = user_attract_place_dict
+        # Список стран рандомно
+        elif answer_type == "country":
+            dictionary = user_attract_country_dict
+        # Список стран по погоде
+        elif answer_type == "weather":
+            dictionary = user_attract_weather_dict
+
+        filter_words = list(set(words).intersection(dictionary))
+
+        # Получен список подходящих стран
+        countries_list = self.find_in_place_dict(answer_type, filter_words,
+                                                 "name")
+
+        # Список стран пуст
+        if not len(countries_list):
+            return ""
+
+        # Установить список стран в правильный падеж
+        for i in range(0, len(countries_list)):
+            countries_list[i] = self.morph.parse(countries_list[i])[0].inflect(set(case)).word
+            countries_list[i] = countries_list[i][0].upper() + countries_list[i][1:]
+
+        # Перевести в читабельный вид
+        countries_string = countries_list[0] if len(countries_list) else ""
+
+        for i in range(1, len(countries_list) - 1):
+            countries_string += ", " + countries_list[i]
+
+        countries_string += " и " + countries_list[-1]
+
+        return countries_string
+
+    def find_in_place_dict(self, key, values, field):
+        if key is None:
+            return None
+
+        result = []
+        limit_country_num = 5
+        for country in place_dict:
+            is_valid_country = False
+
+            if key == "sport":
+                for sport in country["sport"]:
+                    country_sport_set = set(sport.value.split())
+                    country_sport_set_n = set({})
+                    for word in country_sport_set:
+                        country_sport_set_n.add(
+                            self.morph.parse(word)[0].normal_form)
+
+                    if len(country_sport_set_n.intersection(values)):
+                        is_valid_country = True
+
+            if key == "place":
+                for place in country["good_place"]:
+                    if len(set(place.value.split()).intersection(values)):
+                        is_valid_country = True
+
+            if key == "weather":
+                # FIXME: Исправить дублирование словарей
+                warm_set = {"тёплый", "тепло", "жаркий", "жарко"}
+                cold_set = {"холодный", "холодно", "морозный", "морозно"}
+
+                if set(values).intersection(warm_set) \
+                        and country["temperature"] in range(20, 40):
+                    is_valid_country = True
+
+                if set(values).intersection(cold_set) \
+                        and country["temperature"] in range(-30, 5):
+                    is_valid_country = True
+
+            if key == "country":
+                is_valid_country = True
+
+                if len(result) > limit_country_num:
+                    del result[random.randint(0, len(result) - 1)]
+
+            if is_valid_country:
+                result.append(country[field])
+
+        return result
+
+    def generate_user_choose_country_answer(self, answer_type, words):
+        answer_text = None
+
+        if answer_type == "user_choose":
+            answer_text = "Страна выбрана.Вопрос про согласие оформления " \
+                          "визы."
+        elif answer_type == "user_reject":
+            answer_text = "Пользователь не выбрал страну."
+
+        return answer_text
+
+    def generate_user_thinking_about_visa(self, answer_type, words):
+        answer_text = None
+
+        if answer_type == "user_confirm":
+            answer_text = "Пользователь согласен на визу.Вопрос на " \
+                          "подтверждение оформления. "
+        elif answer_type == "user_reject":
+            answer_text = "Пользователь не согласен на визу."
+
+        return answer_text
+
+    def generate_user_approving_travel(self, answer_type, words):
+        answer_text = None
+
+        if answer_type == "user_confirm":
+            answer_text = "Пользователь согласился на оформление. Ура!"
+        elif answer_type == "user_reject":
+            answer_text = "Пользователь не стал соглашаться на оформление."
+
+        return answer_text
+
+    def generate_user_approved_travel(self, answer_type, words):
+        answer_text = "Хорошего дня!"
 
         return answer_text
 
@@ -274,6 +569,15 @@ class DialogSystem(QObject):
         weather_wish_intersect = \
             self.intersect_with_dict(words, user_attract_weather_dict)
 
+        # Поиск пересечений со словарем подтверждения от пользователя
+        confirmation_intersect = self.intersect_with_dict(words,
+                                                          user_confirmation_dict
+                                                          )
+
+        # Поиск пересечений со словарем отказа пользователя
+        rejection_intersect = self.intersect_with_dict(words,
+                                                       user_rejection_dict)
+
         # Отчет синтаксического анализа
         syntactic_report = f'Слова из словаря:\n'
         syntactic_report += f'(А) {wish_intersect}\n'
@@ -284,6 +588,8 @@ class DialogSystem(QObject):
         syntactic_report += f'(F) {time_intersect}\n'
         syntactic_report += f'(G) {weather_intersect}\n'
         syntactic_report += f'(H) {weather_wish_intersect}\n'
+        syntactic_report += f'(I) {confirmation_intersect}\n'
+        syntactic_report += f'(J) {rejection_intersect}\n'
 
         syntactic_report += f'\nКонтекст ответа:\n'
         syntactic_report += f'{answer_type}\n'

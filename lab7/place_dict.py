@@ -2,11 +2,11 @@ from enum import Enum, auto
 
 
 class Sport(Enum):
-    SKIING = auto()
+    SKIING = "горные лыжи"
 
 
 class GoodPlace(Enum):
-    BEACH = auto()
+    BEACH = "пляжный курорт"
 
 
 place_dict = [
