@@ -11,7 +11,7 @@ class GoodPlace(Enum):
 
 place_dict = [
     {
-        "name": "Германия",
+        "name": "германия",
         "temperature": -5,
         "sport": [
             Sport.SKIING
@@ -21,7 +21,7 @@ place_dict = [
         "visa_required": True
     },
     {
-        "name": "Мальдивы",
+        "name": "мальдивы",
         "temperature": 25,
         "sport": [
         ],
@@ -31,7 +31,7 @@ place_dict = [
         "visa_required": True
     },
     {
-        "name": "Исландия",
+        "name": "исландия",
         "temperature": 10,
         "sport": [
         ],
@@ -40,7 +40,7 @@ place_dict = [
         "visa_required": True
     },
     {
-        "name": "Италия",
+        "name": "италия",
         "temperature": 15,
         "sport": [
         ],
@@ -49,7 +49,7 @@ place_dict = [
         "visa_required": True
     },
     {
-        "name": "Куба",
+        "name": "куба",
         "temperature": 20,
         "sport": [
         ],
@@ -59,7 +59,7 @@ place_dict = [
         "visa_required": True
     },
     {
-        "name": "Норвегия",
+        "name": "норвегия",
         "temperature": -10,
         "sport": [
             Sport.SKIING
@@ -69,7 +69,7 @@ place_dict = [
         "visa_required": True
     },
     {
-        "name": "Сочи",
+        "name": "сочи",
         "temperature": 26,
         "sport": [
         ],
@@ -79,7 +79,7 @@ place_dict = [
         "visa_required": False
     },
     {
-        "name": "Тайланд",
+        "name": "таиланд",
         "temperature": 27,
         "sport": [
         ],
@@ -89,7 +89,7 @@ place_dict = [
         "visa_required": True
     },
     {
-        "name": "Франция",
+        "name": "франция",
         "temperature": 5,
         "sport": [
         ],
@@ -98,7 +98,7 @@ place_dict = [
         "visa_required": True
     },
     {
-        "name": "Хибины",
+        "name": "хибины",
         "temperature": -15,
         "sport": [
         ],
@@ -107,7 +107,7 @@ place_dict = [
         "visa_required": False
     },
     {
-        "name": "Шри-Ланка",
+        "name": "шри-ланка",
         "temperature": 28,
         "sport": [
         ],

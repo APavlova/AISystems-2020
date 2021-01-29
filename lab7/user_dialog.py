@@ -95,7 +95,8 @@ class DialogMemory:
         "time": None,
         "weather": None,
         "travel_way": None,
-        "user_like_visa": None
+        "user_like_visa": None,
+        "last_system_message": None
     }
 
     def __init__(self):
@@ -405,21 +406,38 @@ class DialogSystem(QObject):
             countries_list[i] = countries_list[i][0].upper() + countries_list[i][1:]
 
         # Перевести в читабельный вид
-        countries_string = countries_list[0] if len(countries_list) else ""
+        countries_string = self.append_param(countries_list[0], answer_type) if len(countries_list) else ""
 
         for i in range(1, len(countries_list) - 1):
-            countries_string += ", " + countries_list[i]
-
-        countries_string += " и " + countries_list[-1]
+            countries_string += ", " + self.append_param(countries_list[i], answer_type)
+        countries_string += " и " + self.append_param(countries_list[-1], answer_type)
 
         return countries_string
 
-    def find_in_place_dict(self, key, values, field):
+    def append_param(self, country, answer_type):
+        country = self.morph.parse(country)[0].normal_form
+        phrase = ""
+
+        if answer_type == "weather":
+            temperature = self.find_parameter_in_place_dict(country, "temperature")
+            temperature_word = "градус"
+
+            # Согласование с числетельным
+            temperature_word = self.morph.parse(temperature_word)[0].make_agree_with_number(temperature).word
+
+            temperature_phrase = f" (температура {temperature}" \
+                                 f" {temperature_word})"
+            phrase = temperature_phrase
+
+        country = country[0].upper() + country[1:]
+        return country + phrase
+
+    def find_in_place_dict(self, key, values, field, limit=5):
         if key is None:
             return None
 
         result = []
-        limit_country_num = 5
+        limit_country_num = limit
         for country in place_dict:
             is_valid_country = False
 
@@ -462,6 +480,11 @@ class DialogSystem(QObject):
                 result.append(country[field])
 
         return result
+
+    def find_parameter_in_place_dict(self, country_name, param_name):
+        for country in place_dict:
+            if country["name"] == country_name:
+                return country[param_name]
 
     def generate_user_choose_country_answer(self, answer_type, words):
         answer_text = None

@@ -93,7 +93,7 @@ class DialogStateMachine(QObject):
             "dest": DialogState.user_ask_questions,
             "trigger": "user_reject",
             "after":  "send_signal"
-        },
+        }
     ]
 
     def __init__(self):
@@ -104,6 +104,7 @@ class DialogStateMachine(QObject):
         self.setup_transitions()
 
     def setup_transitions(self):
+        # Задать возможные переходы
         self.machine.add_transitions(self.transitions)
 
     def get_transitions(self):
