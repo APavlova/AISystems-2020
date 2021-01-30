@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import QMessageBox, QListWidgetItem
 import logging as log
 from gui import Ui_dialog_form
 import sys
-from user_dialog import DialogSystem
+from user_dialog import DialogSystem, initial_message
 import debug
 
 
@@ -31,6 +31,9 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             self.dialog_system.state_machine.get_state().name
         )
 
+        # Отправить начальное сообщение диалоговой системы
+        self.send_dialog_system_start_message()
+
     def setup_ui(self):
         self.ui.send_message_button.clicked.connect(
             self.send_message
@@ -51,6 +54,9 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.dialog_system.send_analysis_report.connect(
             self.dialog_system_analysis_report_received
         )
+
+    def send_dialog_system_start_message(self):
+        self.dialog_system_answer_message_received(initial_message)
 
     def setup_state_machine(self):
         self.dialog_system.state_machine.send_new_state.connect(
@@ -81,6 +87,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
     def clear_dialog_widget(self):
         self.ui.dialog_widget.clear()
         self.ui.ais_result_view.clear()
+        self.send_dialog_system_start_message()
         # TODO: Перезапустить чат
 
     def clear_message_edit(self):

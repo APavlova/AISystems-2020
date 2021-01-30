@@ -1,23 +1,27 @@
+# Начальное сообщение от диалоговой системы
+initial_message = "Я помогу подобрать страны для путешествия. Задавай" \
+                          " вопрос. "
+
 # Шаблоны ответов диалоговой системы
-dialog_answers = [
+common_dialog_answers = [
     {
         "answer_types": ["sport", "place"],
         "answers": [
             {
                 "template":
-                    "{sport_name} доступны в {country_name}.",
+                    "{sport_name} доступны {location_prefix} {location_name}.",
                 "inflect": {
-                    "country_name": {"loct"},
+                    "location_name": {"loct"},
                     "country_word": {"loct"},
                     "sport_name": {"nomn"}
                 }
             },
             {
                 "template":
-                    "Присмотрите {country_name}. Здесь можно "
+                    "Присмотрите {location_name}. Здесь можно "
                     "найти {sport_name}.",
                 "inflect": {
-                    "country_name": {"accs"},
+                    "location_name": {"accs"},
                     "country_word": {"nomn"},
                     "sport_name": {"nomn"}
                 }
@@ -25,9 +29,9 @@ dialog_answers = [
             {
                 "template":
                     "Для {sport_name} присмотрите {country_word}: "
-                    "{country_name}.",
+                    "{location_name}.",
                 "inflect": {
-                    "country_name": {"nomn"},
+                    "location_name": {"nomn"},
                     "country_word": {"nomn"},
                     "sport_name": {"accs"}
                 }
@@ -39,26 +43,37 @@ dialog_answers = [
         "answers": [
             {
                 "template":
-                    "Мы рекомендуем Вам {country_name}.",
+                    "Мы рекомендуем Вам посетить {location_name}.",
                 "inflect": {
-                    "country_name": {"accs"}
+                    "location_name": {"accs"}
                 }
             },
             {
                 "template":
-                    "Мы можем предложить Вам {country_name}.",
+                    "Мы можем предложить Вам {location_name}.",
                 "inflect": {
-                    "country_name": {"accs"}
+                    "location_name": {"accs"}
                 }
             },
             {
                 "template":
-                    "Советуем Вам посетить {country_name}.",
+                    "Советуем Вам посетить {location_name}.",
                 "inflect": {
-                    "country_name": {"accs"}
+                    "location_name": {"accs"}
                 }
              }
         ]
     }
 ]
 
+yes_no_dialog_answers = [
+    {
+        "template": "{yes_no_word}, {location_prefix} {location_name} "
+                    "{has_hasnt_word} {sport_name}.",
+        "inflect": {
+            "yes_no_word": {"nomn"},
+            "location_prefix": {"nomn"},
+            "location_name": {"loct"}
+        }
+    }
+]

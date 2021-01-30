@@ -292,18 +292,26 @@ class DialogSystem(QObject):
         return answer_text
 
     def apply_answer_template(self, answer_type, words):
-        for dialog_answer in dialog_answers:
+        if set(words).intersection(user_want_yes_no_answer_dict) \
+                and not len(set(words).intersection(user_wish_dict)):
+            # Ответ в формате "Да", "Нет"
+            template_answer = random.choice(yes_no_dialog_answers)
+        else:
+            # Общий ответ
+            template_answer = self.find_common_dialog_template(answer_type)
+
+        # Заполнить идентификаторы шаблона
+        answer_text = self.fill_answer_template(template_answer, answer_type,
+                                                words)
+        return answer_text
+
+    def find_common_dialog_template(self, answer_type):
+        for dialog_answer in common_dialog_answers:
             for a_type in dialog_answer["answer_types"]:
                 # Найдены шаблоны ответов по типу ответа
                 if a_type == answer_type:
                     # Выбрать шаблон ответа случайным образом
-                    template_answer = random.choice(dialog_answer["answers"])
-
-                    # Заполнить идентификаторы шаблона
-                    answer_text = self.fill_answer_template(template_answer,
-                                                            answer_type,
-                                                            words)
-                    return answer_text
+                    return random.choice(dialog_answer["answers"])
         return None
 
     def fill_answer_template(self, template_answer, answer_type, words):
@@ -311,31 +319,51 @@ class DialogSystem(QObject):
         # TODO: Улучшить реализацию
         replace_dict = {}
 
-        # Досуг или место отдыха
-        name = []
-        valid_dict = ""
-        if answer_type == "sport":
-            # Вид досуга из ключевых слов
-            filter_words = list(set(words).intersection(user_attract_sport_dict))
-            name = self.find_in_place_dict(answer_type, filter_words, "sport")
-            valid_dict = "sport_name"
-        elif answer_type == "place":
-            # Вид досуга из ключевых слов
-            filter_words = list(set(words).intersection(user_attract_place_dict))
-            name = self.find_in_place_dict(answer_type, filter_words, "good_place")
-            valid_dict = "good_place"
+        user_want_common_answer = \
+            not len(set(words).intersection(user_want_yes_no_answer_dict)) \
+            or len(set(words).intersection(user_wish_dict))
 
-        if len(name):
+        # Если пользователь ждет общего ответа (рекомендация)
+        if user_want_common_answer:
+            # Найти подходящие страны и поместить в список
+            location_names_list = self.find_suitable_countries(answer_type,
+                                                               words)
+        # Если пользователь ждет ответа "да" или "нет"
+        else:
+            # Выделить из слов страну, интересующую пользователя
+            user_attract_country = \
+                set(words).intersection(user_attract_country_dict)
+            user_attract_country = list(user_attract_country)
+            # Поместить в список
+            location_names_list = user_attract_country
+
+            # Дать ответ на вопрос пользователя
+            is_correct = self.check_country_parameter(user_attract_country[0],
+                                                      answer_type, words)
+
+            replace_dict["yes_no_word"] = "Да" if is_correct else "Нет"
+            replace_dict["has_hasnt_word"] = "есть" if is_correct else "нет"
+
+        # Досуг или место отдыха
+        name = self.get_dict_phrase_from_filter_words(answer_type, words)
+
+        if name is not None:
             # FIXME: Досуг или место отдыха всегда в множественном числе.
             #  Исправить!
-            phrase = name[0][0].value.split()
+            phrase = name
             name = []
             for word in phrase:
                 name.append(self.morph.parse(word)[0].inflect({'plur'}))
 
             str = ""
-            if valid_dict in template_answer["inflect"]:
-                inflect = template_answer["inflect"][valid_dict]
+            if "sport_name" in template_answer["inflect"]:
+                inflect = template_answer["inflect"]["sport_name"]
+                for i in range(0, len(name)):
+                    name[i] = name[i].inflect(inflect)
+
+            # Меняем падеж для вопросов "да" и "нет"
+            if not user_want_common_answer:
+                inflect = {'nomn'} if is_correct else {'gent'}
                 for i in range(0, len(name)):
                     name[i] = name[i].inflect(inflect)
 
@@ -349,15 +377,16 @@ class DialogSystem(QObject):
 
         # Страна
         case = "nomn"
-        if "country_name" in template_answer["inflect"]:
-            case = template_answer["inflect"]["country_name"]
+        if "location_name" in template_answer["inflect"]:
+            case = template_answer["inflect"]["location_name"]
 
-        country_name = self.generate_answer_country_list(answer_type, words,
-                                                         case)
+        # Список из одной и более стран в читабельный вид
+        location_names_str = self.countries_list_to_str(location_names_list,
+                                                        answer_type, case)
 
         if "country_word" in template_answer["inflect"]:
             country_word = self.morph.parse("страна")[0].inflect({
-                'plur' if len(country_name) else 'sing'
+                'plur' if len(location_names_list) else 'sing'
             })
             inflect = template_answer["inflect"]["country_word"]
             country_word = country_word.inflect(inflect)
@@ -365,7 +394,9 @@ class DialogSystem(QObject):
             replace_dict["country_word"] = country_word.word
 
         # Список стран в читабельном виде
-        replace_dict["country_name"] = country_name
+        replace_dict["location_name"] = location_names_str
+        replace_dict["location_prefix"] = \
+            self.generate_location_prefix(location_names_list[0])
 
         # Результирующая строка
         answer_text = Formatter().format(template_answer["template"],
@@ -374,7 +405,43 @@ class DialogSystem(QObject):
 
         return answer_text
 
-    def generate_answer_country_list(self, answer_type, words, case):
+    def get_dict_phrase_from_filter_words(self, answer_type, words):
+        if answer_type == "sport":
+            filter_words = list(
+                set(words).intersection(user_attract_sport_dict))
+            valid_dict = "sport"
+        elif answer_type == "place":
+            filter_words = list(
+                set(words).intersection(user_attract_place_dict))
+            valid_dict = "good_place"
+        else:
+            return None
+
+        name = self.find_in_place_dict(answer_type, filter_words, valid_dict)
+
+        if len(name):
+            return name[0][0].value.split()
+        return None
+
+    def check_country_parameter(self, country_name, answer_type, words):
+        results = None
+        filter_words = {}
+        if answer_type == "sport":
+            results = self.find_parameter_in_place_dict(country_name, "sport")
+            filter_words = set(words).intersection(user_attract_sport_dict)
+        elif answer_type == "place":
+            results = self.find_parameter_in_place_dict(country_name,
+                                                        "good_place")
+            filter_words = set(words).intersection(user_attract_place_dict)
+        # TODO: Добавить про погоду
+
+        for result in results:
+            words = set(result.value.split())
+            if words.intersection(filter_words):
+                return True
+        return False
+
+    def find_suitable_countries(self, answer_type, words):
         dictionary = None
 
         # Фильтр стран по досугу
@@ -396,41 +463,69 @@ class DialogSystem(QObject):
         countries_list = self.find_in_place_dict(answer_type, filter_words,
                                                  "name")
 
+        return countries_list
+
+    def countries_list_to_str(self, countries_list, answer_type, case):
         # Список стран пуст
         if not len(countries_list):
-            return ""
+            return "", None
 
         # Установить список стран в правильный падеж
         for i in range(0, len(countries_list)):
-            countries_list[i] = self.morph.parse(countries_list[i])[0].inflect(set(case)).word
-            countries_list[i] = countries_list[i][0].upper() + countries_list[i][1:]
+            countries_list[i] = self.morph.parse(countries_list[i])[0].inflect(
+                set(case)
+            ).word
+            countries_list[i] = countries_list[i][0].upper() + countries_list[
+                                                                   i][1:]
 
         # Перевести в читабельный вид
-        countries_string = self.append_param(countries_list[0], answer_type) if len(countries_list) else ""
+        countries_string = self.append_param(countries_list[0], answer_type)
 
         for i in range(1, len(countries_list) - 1):
-            countries_string += ", " + self.append_param(countries_list[i], answer_type)
-        countries_string += " и " + self.append_param(countries_list[-1], answer_type)
+            countries_string += ", " + self.append_param(countries_list[i],
+                                                         answer_type)
+
+        if len(countries_list) > 1:
+            countries_string += " и " + self.append_param(countries_list[-1],
+                                                          answer_type)
 
         return countries_string
 
-    def append_param(self, country, answer_type):
-        country = self.morph.parse(country)[0].normal_form
+    # Сгенерировать приставки "в, во, на" на основе названия
+    def generate_location_prefix(self, location_name):
+        # если первые две буквы слова - согласные, то приставка "во"
+        consonants = ['бвгджзйклмнпрстфхцчшщ']
+        if location_name[0] in consonants and location_name[1] in consonants:
+            return "во"
+
+        # если Куба, то приставка "на"
+        if self.morph.parse(location_name)[0].normal_form == "куба":
+            return "на"
+
+        return "в"
+
+    # Добавить параметр к объекту в скобках (например температура)
+    def append_param(self, location_name, answer_type):
+        location_name_normal = self.morph.parse(location_name)[0].normal_form
         phrase = ""
 
+        # Добавить температуру
         if answer_type == "weather":
-            temperature = self.find_parameter_in_place_dict(country, "temperature")
+            temperature = self.find_parameter_in_place_dict(
+                location_name_normal,
+                "temperature")
             temperature_word = "градус"
 
             # Согласование с числетельным
-            temperature_word = self.morph.parse(temperature_word)[0].make_agree_with_number(temperature).word
+            temperature_word = self.morph.parse(temperature_word)[
+                0].make_agree_with_number(temperature).word
 
             temperature_phrase = f" (температура {temperature}" \
                                  f" {temperature_word})"
             phrase = temperature_phrase
 
-        country = country[0].upper() + country[1:]
-        return country + phrase
+        location_name = location_name[0].upper() + location_name[1:]
+        return location_name + phrase
 
     def find_in_place_dict(self, key, values, field, limit=5):
         if key is None:
@@ -481,9 +576,9 @@ class DialogSystem(QObject):
 
         return result
 
-    def find_parameter_in_place_dict(self, country_name, param_name):
+    def find_parameter_in_place_dict(self, location_name, param_name):
         for country in place_dict:
-            if country["name"] == country_name:
+            if country["name"] == location_name:
                 return country[param_name]
 
     def generate_user_choose_country_answer(self, answer_type, words):
