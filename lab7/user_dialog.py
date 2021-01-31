@@ -26,7 +26,7 @@ dialog_sentence_patterns = [
         "state": [DialogState.user_ask_questions],
         "patterns": [
             {
-                # Ключевое слово в предложении - вид спорта
+                # Ключевое слово в предложении - вид досуга
                 # [A] [B] C [E]
                 "required": [user_attract_sport_dict],
                 "optional": [user_wish_dict, user_attract_travel_way_dict,
@@ -325,7 +325,7 @@ class DialogSystem(QObject):
 
         # Если пользователь ждет общего ответа (рекомендация)
         if user_want_common_answer:
-            # Найти подходящие страны и поместить в список
+            # Подобрать страны и поместить в список
             location_names_list = self.find_suitable_countries(answer_type,
                                                                words)
         # Если пользователь ждет ответа "да" или "нет"
@@ -417,7 +417,8 @@ class DialogSystem(QObject):
         else:
             return None
 
-        name = self.find_in_place_dict(answer_type, filter_words, valid_dict)
+        name = self.find_in_place_dict(answer_type, filter_words, valid_dict,
+                                       words)
 
         if len(name):
             return name[0][0].value.split()
@@ -461,7 +462,7 @@ class DialogSystem(QObject):
 
         # Получен список подходящих стран
         countries_list = self.find_in_place_dict(answer_type, filter_words,
-                                                 "name")
+                                                 "name", words)
 
         return countries_list
 
@@ -527,7 +528,7 @@ class DialogSystem(QObject):
         location_name = location_name[0].upper() + location_name[1:]
         return location_name + phrase
 
-    def find_in_place_dict(self, key, values, field, limit=5):
+    def find_in_place_dict(self, key, values, field, words, limit=5):
         if key is None:
             return None
 
@@ -558,15 +559,48 @@ class DialogSystem(QObject):
                 cold_set = {"холодный", "холодно", "морозный", "морозно"}
 
                 if set(values).intersection(warm_set) \
-                        and country["temperature"] in range(20, 40):
+                        and country["temperature"] in warm_range_temperature:
                     is_valid_country = True
 
                 if set(values).intersection(cold_set) \
-                        and country["temperature"] in range(-30, 5):
+                        and country["temperature"] in cold_range_temperature:
                     is_valid_country = True
 
             if key == "country":
-                is_valid_country = True
+                # Найти что-то похожее
+                # TODO: анализировать не только по текущей погоде
+                some_country = set(words).intersection(user_attract_country_dict)
+                some_country = list(some_country)[0] if len(some_country) else None
+
+                user_want_similar = set(words).intersection(user_want_similar_dict)
+                user_want_similar = True if len(user_want_similar) else False
+
+                if some_country and user_want_similar:
+                    wish_temperature = \
+                        self.find_parameter_in_place_dict(some_country,
+                                                          "temperature")
+                    location_temperature = \
+                        self.find_parameter_in_place_dict(country["name"],
+                                                          "temperature")
+
+                    if wish_temperature in warm_range_temperature \
+                            and location_temperature in warm_range_temperature:
+                        is_valid_country = True
+
+                    if wish_temperature in norm_range_temperature \
+                            and location_temperature in norm_range_temperature:
+                        is_valid_country = True
+
+                    if wish_temperature in cold_range_temperature \
+                            and location_temperature in cold_range_temperature:
+                        is_valid_country = True
+
+                    if self.morph.parse(some_country)[0].normal_form == \
+                            self.morph.parse(country["name"])[0].normal_form:
+                        is_valid_country = False
+                else:
+                    # Найти случайным образом
+                    is_valid_country = True
 
                 if len(result) > limit_country_num:
                     del result[random.randint(0, len(result) - 1)]

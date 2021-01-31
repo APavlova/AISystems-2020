@@ -64,3 +64,11 @@ user_want_it_dict = {
 user_want_yes_no_answer_dict = {
     "есть", "мочь"
 }
+
+user_want_similar_dict = {
+    "похожий", "схожий"
+}
+
+cold_range_temperature = range(-30, 5)
+norm_range_temperature = range(5, 20)
+warm_range_temperature = range(20, 40)
