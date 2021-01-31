@@ -556,7 +556,7 @@ class DialogSystem(QObject):
                 0].make_agree_with_number(temperature).word
 
             temperature_phrase = f" (температура " \
-                                 f"{'+' if temperature >= 0 else '-'}" \
+                                 f"{'+' if temperature >= 0 else ''}" \
                                  f"{temperature} {temperature_word})"
             phrase = temperature_phrase
 
