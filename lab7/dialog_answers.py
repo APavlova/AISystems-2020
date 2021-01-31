@@ -33,7 +33,7 @@ common_dialog_answers = [
                 "inflect": {
                     "location_name": {"nomn"},
                     "country_word": {"nomn"},
-                    "sport_name": {"accs"}
+                    "sport_name": {"gent"}
                 }
              }
         ]
