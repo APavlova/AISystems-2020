@@ -247,6 +247,9 @@ class DialogSystem(QObject):
     def generate_answer(self, answer_type, words):
         answer_text = None
 
+        if answer_type is None:
+            return i_dont_understand_phrase
+
         # Формирование ответа на вопрос пользователя
         if self.state_machine.get_state() == DialogState.user_ask_questions:
             answer_text = self.generate_user_ask_answer(answer_type, words)
@@ -271,8 +274,8 @@ class DialogSystem(QObject):
             answer_text = self.generate_user_approved_travel(answer_type, words)
 
         # Вопрос или ответ не распознаны
-        if answer_type is None or answer_text is None:
-            answer_text = "Я не понимаю."
+        if answer_text is None:
+            answer_text = i_dont_understand_phrase
 
         return answer_text
 
@@ -319,6 +322,9 @@ class DialogSystem(QObject):
         # TODO: Улучшить реализацию
         replace_dict = {}
 
+        if answer_type is None or template_answer is None:
+            return i_dont_understand_phrase
+
         user_want_common_answer = \
             not len(set(words).intersection(user_want_yes_no_answer_dict)) \
             or len(set(words).intersection(user_wish_dict))
@@ -343,6 +349,10 @@ class DialogSystem(QObject):
 
             replace_dict["yes_no_word"] = "Да" if is_correct else "Нет"
             replace_dict["has_hasnt_word"] = "есть" if is_correct else "нет"
+
+        # Не найдены страны подходящие
+        if not len(location_names_list):
+            return i_dont_know_phrase
 
         # Досуг или место отдыха
         name = self.get_dict_phrase_from_filter_words(answer_type, words)
@@ -398,9 +408,19 @@ class DialogSystem(QObject):
         replace_dict["location_prefix"] = \
             self.generate_location_prefix(location_names_list[0])
 
+        # Проверить заполнен ли шаблон ответа полностью
+        template_str = template_answer["template"]
+        template_params = []
+        for param in Formatter().parse(template_str):
+            template_params.append(param[1])
+
+        for param in template_params:
+            if param is not None \
+                    and param not in replace_dict.keys():
+                return i_dont_understand_phrase
+
         # Результирующая строка
-        answer_text = Formatter().format(template_answer["template"],
-                                         **replace_dict)
+        answer_text = Formatter().format(template_str, **replace_dict)
         answer_text = answer_text[0].upper() + answer_text[1:]
 
         return answer_text
@@ -420,9 +440,17 @@ class DialogSystem(QObject):
         name = self.find_in_place_dict(answer_type, filter_words, valid_dict,
                                        words)
 
-        if len(name):
-            return name[0][0].value.split()
+        if name is not None and len(name):
+            if len(name[0]):
+                for obj_enum in name[0]:
+                    words = obj_enum.value.split()
+                    words = list(map(lambda word: self.morph.parse(word)[0].normal_form, words))
+                    if set(filter_words).intersection(words):
+                        return words
+
         return None
+
+
 
     def check_country_parameter(self, country_name, answer_type, words):
         results = None

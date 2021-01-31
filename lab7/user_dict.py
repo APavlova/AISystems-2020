@@ -41,6 +41,7 @@ weather_dict = {
 
 # Словарь слов и их синонимов, обозначающие температуру воздуха
 user_attract_weather_dict = {
+    "погода",
     "тёплый", "тепло", "жаркий", "жарко",  # : [20, 40],
     "холодный", "холодно", "морозный", "морозно"  # : [-20, 10]
 }
@@ -72,3 +73,6 @@ user_want_similar_dict = {
 cold_range_temperature = range(-30, 5)
 norm_range_temperature = range(5, 20)
 warm_range_temperature = range(20, 40)
+
+i_dont_know_phrase = "Я не знаю!"
+i_dont_understand_phrase = "Я не понимаю."
