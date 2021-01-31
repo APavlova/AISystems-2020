@@ -440,17 +440,23 @@ class DialogSystem(QObject):
         name = self.find_in_place_dict(answer_type, filter_words, valid_dict,
                                        words)
 
+        phrase = None
+        max_match_num = 0
         if name is not None and len(name):
-            if len(name[0]):
-                for obj_enum in name[0]:
+            for obj_list in name:
+                for obj_enum in obj_list:
                     words = obj_enum.value.split()
                     words = list(map(lambda word: self.morph.parse(word)[0].normal_form, words))
-                    if set(filter_words).intersection(words):
-                        return words
+                    word_set = set(filter_words).intersection(words)
+                    if word_set:
+                        if max_match_num < len(word_set):
+                            phrase = words
+                            max_match_num = len(word_set)
+
+        if phrase is not None and max_match_num > 0:
+            return phrase
 
         return None
-
-
 
     def check_country_parameter(self, country_name, answer_type, words):
         results = None
@@ -549,8 +555,9 @@ class DialogSystem(QObject):
             temperature_word = self.morph.parse(temperature_word)[
                 0].make_agree_with_number(temperature).word
 
-            temperature_phrase = f" (температура {temperature}" \
-                                 f" {temperature_word})"
+            temperature_phrase = f" (температура " \
+                                 f"{'+' if temperature >= 0 else '-'}" \
+                                 f"{temperature} {temperature_word})"
             phrase = temperature_phrase
 
         location_name = location_name[0].upper() + location_name[1:]

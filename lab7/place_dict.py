@@ -7,6 +7,7 @@ class Sport(Enum):
 
 class GoodPlace(Enum):
     BEACH = "пляжный курорт"
+    SKIING = "лыжный курорт"
     SEA = "море"
     OCEAN = "океан"
 
@@ -19,6 +20,7 @@ place_dict = [
             Sport.SKIING
         ],
         "good_place": [
+            GoodPlace.SKIING
         ],
         "visa_required": True
     },
@@ -67,6 +69,7 @@ place_dict = [
             Sport.SKIING
         ],
         "good_place": [
+            GoodPlace.SKIING
         ],
         "visa_required": True
     },
